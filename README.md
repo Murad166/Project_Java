@@ -48,5 +48,4 @@ The tool applies core **OOP concepts** such as **Encapsulation, Inheritance, Pol
 
 ---
 
-## 🗂️ Project Structure
 
