@@ -1,102 +1,110 @@
-public class Main {
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class App {
     public static void main(String[] args) {
-        System.out.println("Phishing Detecting Tool Started...");
-
-        // Run analyzers
-        new analysis.URLAnalyzer().analyze("http://phishingsite.com");
-        new analysis.EmailAnalyzer().analyze("From: fake@spoofed.com");
-        new analysis.ClickAnalyzer().analyzeClick("http://example.com/redirect");
-        new analysis.ImageAnalyzer().analyzeImage("fake_logo.png");
+        SwingUtilities.invokeLater(() -> new PhishingDetectorGUI().createAndShowGUI());
     }
 }
-package utils;
 
-public class AlertManager {
-    public static void sendAlert(String message) {
-        System.out.println("🚨 ALERT: " + message);
+class PhishingDetectorGUI {
+    private JTextArea outputArea;
+
+    public void createAndShowGUI() {
+        JFrame frame = new JFrame("🔐 Phishing Detection Tool");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(500, 500);
+        frame.setLayout(new BorderLayout());
+
+        // Input panel
+        JPanel inputPanel = new JPanel(new GridLayout(5, 2, 10, 10));
+        JTextField urlField = new JTextField();
+        JTextField emailField = new JTextField();
+        JTextField clickField = new JTextField();
+        JTextField imageField = new JTextField();
+        JButton analyzeButton = new JButton("🚨 Analyze");
+
+        inputPanel.add(new JLabel("🌐 URL:"));
+        inputPanel.add(urlField);
+        inputPanel.add(new JLabel("📧 Email Header:"));
+        inputPanel.add(emailField);
+        inputPanel.add(new JLabel("🖱️ Click Link:"));
+        inputPanel.add(clickField);
+        inputPanel.add(new JLabel("🖼️ Image Name:"));
+        inputPanel.add(imageField);
+        inputPanel.add(new JLabel());  // empty cell
+        inputPanel.add(analyzeButton);
+
+        // Output area
+        outputArea = new JTextArea();
+        outputArea.setEditable(false);
+        outputArea.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        JScrollPane scrollPane = new JScrollPane(outputArea);
+
+        frame.add(inputPanel, BorderLayout.NORTH);
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.setVisible(true);
+
+        analyzeButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                outputArea.setText(""); // Clear output
+                analyze(urlField.getText(), emailField.getText(), clickField.getText(), imageField.getText());
+            }
+        });
+    }
+
+    private void analyze(String url, String email, String click, String image) {
+        outputArea.append("🔍 Starting Analysis...\n\n");
+
+        new URLAnalyzer().analyze(url, outputArea);
+        new EmailAnalyzer().analyze(email, outputArea);
+        new ClickAnalyzer().analyze(click, outputArea);
+        new ImageAnalyzer().analyze(image, outputArea);
+
+        outputArea.append("\n✅ All checks completed!\n");
     }
 }
-package analysis;
 
-import utils.AlertManager;
+// ---- Simulated Analyzer Classes ----
 
-public class URLAnalyzer {
-    public void analyze(String url) {
+class URLAnalyzer {
+    public void analyze(String url, JTextArea output) {
         if (url.contains("phish") || url.contains("login") || url.contains("verify")) {
-            AlertManager.sendAlert("Suspicious URL Detected: " + url);
+            output.append("🚨 Suspicious URL Detected: " + url + "\n");
         } else {
-            System.out.println("URL looks clean: " + url);
+            output.append("✅ URL looks clean: " + url + "\n");
         }
     }
 }
-package analysis;
 
-import utils.AlertManager;
-
-public class EmailAnalyzer {
-    public void analyze(String emailHeader) {
-        if (emailHeader.toLowerCase().contains("spoofed") || emailHeader.toLowerCase().contains("unknown")) {
-            AlertManager.sendAlert("Suspicious Email Header Detected: " + emailHeader);
+class EmailAnalyzer {
+    public void analyze(String email, JTextArea output) {
+        if (email.toLowerCase().contains("spoofed") || email.toLowerCase().contains("unknown")) {
+            output.append("🚨 Suspicious Email Header: " + email + "\n");
         } else {
-            System.out.println("Email Header OK: " + emailHeader);
+            output.append("✅ Email header looks fine: " + email + "\n");
         }
     }
 }
-package analysis;
 
-import utils.AlertManager;
-
-public class ClickAnalyzer {
-    public void analyzeClick(String link) {
-        if (link.contains("redirect") || link.contains("tracker")) {
-            AlertManager.sendAlert("Suspicious Click Activity Detected: " + link);
+class ClickAnalyzer {
+    public void analyze(String click, JTextArea output) {
+        if (click.contains("redirect") || click.contains("tracker")) {
+            output.append("🚨 Suspicious Click Activity: " + click + "\n");
         } else {
-            System.out.println("Click behavior normal: " + link);
+            output.append("✅ Click behavior normal: " + click + "\n");
         }
     }
 }
-package analysis;
 
-import utils.AlertManager;
-
-public class ImageAnalyzer {
-    public void analyzeImage(String imagePath) {
-        // Placeholder
-        if (imagePath.toLowerCase().contains("fake") || imagePath.toLowerCase().contains("logo")) {
-            AlertManager.sendAlert("Suspicious Logo/Image Found: " + imagePath);
+class ImageAnalyzer {
+    public void analyze(String image, JTextArea output) {
+        if (image.toLowerCase().contains("fake") || image.toLowerCase().contains("logo")) {
+            output.append("🚨 Suspicious Image Detected: " + image + "\n");
         } else {
-            System.out.println("Image seems safe: " + imagePath);
-        }
-    }
-}
-package db;
-
-import java.sql.*;
-
-public class DatabaseManager {
-    private static final String DB_URL = "jdbc:sqlite:phishing_logs.db";
-
-    public DatabaseManager() {
-        try (Connection conn = DriverManager.getConnection(DB_URL)) {
-            String createTable = "CREATE TABLE IF NOT EXISTS logs (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "message TEXT," +
-                    "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)";
-            Statement stmt = conn.createStatement();
-            stmt.execute(createTable);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void logAlert(String message) {
-        try (Connection conn = DriverManager.getConnection(DB_URL)) {
-            String insert = "INSERT INTO logs (message) VALUES (?)";
-            PreparedStatement pstmt = conn.prepareStatement(insert);
-            pstmt.setString(1, message);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            output.append("✅ Image looks okay: " + image + "\n");
         }
     }
 }
